@@ -13,12 +13,40 @@ namespace rsademo
         public static Tuple<long, long> PublicKey;
         public static Tuple<long, long> PrivateKey;
         
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            var stopwatch = new Stopwatch();
+            var rsa = new BigIntRsa();
+
+            try
+            {
+                await rsa.Prepare();
+
+                var test = new BigInteger(69420);
+                var encrypted = rsa.Encrypt(test);
+                var decrypted = rsa.Decrypt(encrypted);
+                
+                Console.WriteLine($"message: {test}");
+                Console.WriteLine($"encrypted: {encrypted}");
+                Console.WriteLine($"decry[ted: {decrypted}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+
+            /*var stopwatch = new Stopwatch();
             stopwatch.Start();
 
             var (p, q) = GetPrimeNumbers();
+
+            if (p < q)
+            {
+                var temp = p;
+                p = q;
+                q = temp;
+            }
+            
             var n = p * q;
 
             var phi = (p - 1) * (q - 1);
@@ -59,7 +87,7 @@ namespace rsademo
             
             Console.WriteLine($"before: {test}");
             Console.WriteLine($"encrypted: {test2}");
-            Console.WriteLine($"after: {test3}");
+            Console.WriteLine($"after: {test3}");*/
 
             /*stopwatch.Reset();
 
@@ -221,8 +249,8 @@ namespace rsademo
         {
             var bigY = new BigInteger(y);
             var bigN = new BigInteger(n);
-            
-            return BigInteger.ModPow(x, bigY, bigN);
+
+            return x.modPow(bigY, bigN);
         }
     }
 }
