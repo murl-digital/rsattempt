@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,8 +10,8 @@ namespace rsademo
 {
     class Program
     {
-        public static Tuple<ulong, ulong> PublicKey;
-        public static Tuple<ulong, ulong> PrivateKey;
+        public static Tuple<long, long> PublicKey;
+        public static Tuple<long, long> PrivateKey;
         
         static void Main(string[] args)
         {
@@ -21,26 +22,46 @@ namespace rsademo
             var n = p * q;
 
             var phi = (p - 1) * (q - 1);
-            ulong e = 65537; // prime number recommended by article
+            long e = 65537; // prime number recommended by article
             while (Gcd(phi, e) != 1)
             {
-                while (!IsPrime(e))
-                {
+                if (Gcd(e, phi) == 1)
+                    break;
+                if (e < phi)
                     e++;
+            }
+
+            long d;
+            long tempD;
+
+            for (var i = 2;; i++)
+            {
+                d = (phi * i + 1) / e;
+                tempD = (phi * i + 1) % e;
+
+                if (tempD == 0)
+                {
+                    break;
                 }
             }
 
-            var d = (1 / e) % phi;
-
-            PublicKey = new Tuple<ulong, ulong>(e, n);
-            PrivateKey = new Tuple<ulong, ulong>(d, n);
+            PublicKey = new Tuple<long, long>(e, n);
+            PrivateKey = new Tuple<long, long>(d, n);
 
             stopwatch.Stop();
             
             //Console.WriteLine($"{n1} | {n2}");
             Console.WriteLine($"key generation took {stopwatch.Elapsed}");
+
+            var test = new BigInteger(69);
+            var test2 = Crypt(test, PublicKey.Item1, PublicKey.Item2);
+            var test3 = Crypt(test, PrivateKey.Item1, PrivateKey.Item2);
             
-            stopwatch.Reset();
+            Console.WriteLine($"before: {test}");
+            Console.WriteLine($"encrypted: {test2}");
+            Console.WriteLine($"after: {test3}");
+
+            /*stopwatch.Reset();
 
             var TestMessage = "hee hoo pee nut";
             
@@ -103,20 +124,20 @@ namespace rsademo
             stopwatch.Stop();
             
             Console.WriteLine(decrypted);
-            Console.WriteLine($"decryption took {stopwatch.Elapsed}");
+            Console.WriteLine($"decryption took {stopwatch.Elapsed}");*/
         }
 
-        public static (ulong, ulong) GetPrimeNumbers()
+        public static (long, long) GetPrimeNumbers()
         {
             var random = new Random();
 
-            ulong n1 = (ulong) random.Next();
-            ulong n2 = (ulong) random.Next();
+            long n1 = (long) random.Next();
+            long n2 = (long) random.Next();
 
             while (IsPrime(n1) && IsPrime(n2))
             {
-                n1 = (ulong) random.Next();
-                n2 = (ulong) random.Next();
+                n1 = (long) random.Next();
+                n2 = (long) random.Next();
             }
 
             return (n1, n2);
@@ -124,10 +145,10 @@ namespace rsademo
         
         // source:
         // https://www.codeproject.com/questions/1076264/generating-random-prime-number-in-csharp
-        public static bool IsPrime(ulong n)
+        public static bool IsPrime(long n)
         {
             var sqrt = Math.Sqrt(n);
-            for (ulong i = 2; i <= sqrt; i++)
+            for (long i = 2; i <= sqrt; i++)
             {
                 if ((n % i) == 0) return false;
             }
@@ -137,9 +158,9 @@ namespace rsademo
         
         // source:
         // https://stackoverflow.com/questions/46846973/coprime-integers
-        public static ulong Gcd(ulong m, ulong n)
+        public static long Gcd(long m, long n)
         {
-            ulong tmp = 0;
+            long tmp = 0;
             if (m < n)
             {
                 tmp = m;
@@ -155,9 +176,53 @@ namespace rsademo
             return m;
         }
 
-        public static int Crypt(int x, ulong y, ulong n)
+        // a portion of Euclid's Extended Algorithm for getting the mod inverse.
+        public static long ModInv(long a, long b)
         {
-            return (int) (Math.Pow(x, y) % n);
+            long x, prevX, _b, y, prevY, _a, quotient, temp;
+
+            if (a < b)
+            {
+                x = 0;
+                prevX = 1;
+                _b = b;
+                y = 1;
+                prevY = 0;
+                _a = a;
+            }
+            else
+            {
+                x = a;
+                prevX = 0;
+                _b = a;
+                y = 0;
+                prevY = 1;
+                _a = b;
+            }
+
+            while (_a > 0)
+            {
+                temp = _a;
+                quotient = _b / _a;
+
+                _a = _b % temp;
+                _b = temp;
+                temp = y;
+
+                y = prevY - quotient * temp;
+                prevY = temp;
+            }
+
+            if (prevY < 0) prevY = (prevY + b) % b;
+            return prevY;
+        }
+
+        public static BigInteger Crypt(BigInteger x, long y, long n)
+        {
+            var bigY = new BigInteger(y);
+            var bigN = new BigInteger(n);
+            
+            return BigInteger.ModPow(x, bigY, bigN);
         }
     }
 }
