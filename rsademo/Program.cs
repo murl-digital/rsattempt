@@ -16,18 +16,76 @@ namespace rsademo
         static async Task Main(string[] args)
         {
             var rsa = new BigIntRsa();
+            var stopwatch = new Stopwatch();
 
             try
             {
+                stopwatch.Start();
                 await rsa.Prepare();
-
-                var test = new BigInteger(69420);
-                var encrypted = rsa.Encrypt(test);
-                var decrypted = rsa.Decrypt(encrypted);
+                stopwatch.Stop();
                 
-                Console.WriteLine($"message: {test}");
-                Console.WriteLine($"encrypted: {encrypted}");
-                Console.WriteLine($"decry[ted: {decrypted}");
+                Console.WriteLine($"preparation took {stopwatch.Elapsed}");
+                stopwatch.Reset();
+
+                //var TestMessage = "hee hoo pee nut";
+                var TestMessage = "One of the basic pieces of furniture, a chair is a type of seat. Its primary features are two pieces of a durable material, attached as back and seat to one another at a 90° or slightly greater angle, with usually the four corners of the horizontal seat attached in turn to four legs—or other parts of the seat's underside attached to three legs or to a shaft about which a four-arm turnstile on rollers can turn—strong enough to support the weight of a person who sits on the seat (usually wide and broad enough to hold the lower body from the buttocks almost to the knees) and leans against the vertical back (usually high and wide enough to support the back to the shoulder blades). The legs are typically high enough for the seated person's thighs and knees to form a 90° or lesser angle.[1][2] Used in a number of rooms in homes (e.g. in living rooms, dining rooms, and dens), in schools and offices (with desks), and in various other workplaces, chairs may be made of wood, metal, or synthetic materials, and either the seat alone or the entire chair may be padded or upholstered in various colors and fabrics. Chairs vary in design. An armchair has armrests fixed to the seat;[3] a recliner is upholstered and under its seat is a mechanism that allows one to lower the chair's back and raise into place a fold-out footrest;[4] a rocking chair has legs fixed to two long curved slats; and a wheelchair has wheels fixed to an axis under the seat.[5]";
+
+                var encoded = new List<int>();
+
+                stopwatch.Start();
+
+                foreach (var b in Encoding.Unicode.GetBytes(TestMessage))
+                {
+                    encoded.Add(b);
+                }
+                
+                var encrypted = new BigInteger[encoded.Count];
+                
+                stopwatch.Stop();
+                Console.WriteLine($"encoding took {stopwatch.Elapsed}");
+                stopwatch.Reset();
+                stopwatch.Start();
+
+                Parallel.For(0, encoded.Count, i =>
+                {
+                    encrypted[i] = rsa.Encrypt(new BigInteger(encoded[i]));
+                });
+
+                /*foreach (var i in encoded)
+                {
+                    encrypted.Add(rsa.Encrypt(new BigInteger(i)));
+                }*/
+                
+                stopwatch.Stop();
+                Console.WriteLine($"encryption took {stopwatch.Elapsed}");
+                stopwatch.Reset();
+
+                var decrypted = new byte[encrypted.Length];
+                var decoded = "";
+                
+                stopwatch.Start();
+
+                Parallel.For(0, encrypted.Length, i =>
+                {
+                    decrypted[i] = (byte) rsa.Decrypt(encrypted[i]).IntValue();
+                });
+                
+                /*foreach (var i in encrypted)
+                {
+                    decrypted.Add((byte) rsa.Decrypt(i).IntValue());
+                }*/
+                
+                stopwatch.Stop();
+                Console.WriteLine($"decryption took {stopwatch.Elapsed}");
+                stopwatch.Reset();
+                stopwatch.Start();
+
+                decoded = Encoding.Unicode.GetString(decrypted.ToArray());
+                
+                stopwatch.Stop();
+                Console.WriteLine($"decoding took {stopwatch.Elapsed}");
+                
+                Console.WriteLine(decoded);
             }
             catch (Exception e)
             {
