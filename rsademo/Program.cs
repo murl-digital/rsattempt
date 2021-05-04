@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using ShellProgressBar;
 
 namespace rsademo
 {
@@ -16,75 +17,77 @@ namespace rsademo
         static async Task Main(string[] args)
         {
             var rsa = new BigIntRsa();
-            var stopwatch = new Stopwatch();
 
             try
             {
-                stopwatch.Start();
-                await rsa.Prepare();
-                stopwatch.Stop();
+                var options = new ProgressBarOptions
+                {
+                    ProgressCharacter = '#',
+                };
+
+                using (var bar = new ProgressBar(1, "Preparing...", options))
+                {
+                    await rsa.Prepare();
+                    bar.Tick();
+                }
                 
-                Console.WriteLine($"preparation took {stopwatch.Elapsed}");
-                stopwatch.Reset();
+                Console.WriteLine($"Public key: [{rsa.Egg}, {rsa.N}]");
+                Console.WriteLine($"Private key: [{rsa.D}, {rsa.N}]");
 
                 //var TestMessage = "hee hoo pee nut";
                 var TestMessage = "One of the basic pieces of furniture, a chair is a type of seat. Its primary features are two pieces of a durable material, attached as back and seat to one another at a 90° or slightly greater angle, with usually the four corners of the horizontal seat attached in turn to four legs—or other parts of the seat's underside attached to three legs or to a shaft about which a four-arm turnstile on rollers can turn—strong enough to support the weight of a person who sits on the seat (usually wide and broad enough to hold the lower body from the buttocks almost to the knees) and leans against the vertical back (usually high and wide enough to support the back to the shoulder blades). The legs are typically high enough for the seated person's thighs and knees to form a 90° or lesser angle.[1][2] Used in a number of rooms in homes (e.g. in living rooms, dining rooms, and dens), in schools and offices (with desks), and in various other workplaces, chairs may be made of wood, metal, or synthetic materials, and either the seat alone or the entire chair may be padded or upholstered in various colors and fabrics. Chairs vary in design. An armchair has armrests fixed to the seat;[3] a recliner is upholstered and under its seat is a mechanism that allows one to lower the chair's back and raise into place a fold-out footrest;[4] a rocking chair has legs fixed to two long curved slats; and a wheelchair has wheels fixed to an axis under the seat.[5]";
 
                 var encoded = new List<int>();
 
-                stopwatch.Start();
-
-                foreach (var b in Encoding.Unicode.GetBytes(TestMessage))
+                using (var bar = new ProgressBar(1, "Encoding...", options))
                 {
-                    encoded.Add(b);
+                    foreach (var b in Encoding.Unicode.GetBytes(TestMessage))
+                    {
+                        encoded.Add(b);
+                    }
+                    bar.Tick();
                 }
                 
                 var encrypted = new BigInteger[encoded.Count];
-                
-                stopwatch.Stop();
-                Console.WriteLine($"encoding took {stopwatch.Elapsed}");
-                stopwatch.Reset();
-                stopwatch.Start();
 
-                Parallel.For(0, encoded.Count, i =>
+
+                using (var bar = new ProgressBar(encoded.Count, "Encrypting...", options))
                 {
-                    encrypted[i] = rsa.Encrypt(new BigInteger(encoded[i]));
-                });
+                    Parallel.For(0, encoded.Count, i =>
+                    {
+                        encrypted[i] = rsa.Encrypt(new BigInteger(encoded[i]));
+                        bar.Tick();
+                    });
+                }
 
                 /*foreach (var i in encoded)
                 {
                     encrypted.Add(rsa.Encrypt(new BigInteger(i)));
                 }*/
-                
-                stopwatch.Stop();
-                Console.WriteLine($"encryption took {stopwatch.Elapsed}");
-                stopwatch.Reset();
 
                 var decrypted = new byte[encrypted.Length];
-                var decoded = "";
-                
-                stopwatch.Start();
+                string decoded;
 
-                Parallel.For(0, encrypted.Length, i =>
+                using (var bar = new ProgressBar(encrypted.Length, "Decrypting...", options))
                 {
-                    decrypted[i] = (byte) rsa.Decrypt(encrypted[i]).IntValue();
-                });
+                    Parallel.For(0, encrypted.Length, i =>
+                    {
+                        decrypted[i] = (byte) rsa.Decrypt(encrypted[i]).IntValue();
+                        bar.Tick();
+                    });
+                }
                 
                 /*foreach (var i in encrypted)
                 {
                     decrypted.Add((byte) rsa.Decrypt(i).IntValue());
                 }*/
-                
-                stopwatch.Stop();
-                Console.WriteLine($"decryption took {stopwatch.Elapsed}");
-                stopwatch.Reset();
-                stopwatch.Start();
 
-                decoded = Encoding.Unicode.GetString(decrypted.ToArray());
-                
-                stopwatch.Stop();
-                Console.WriteLine($"decoding took {stopwatch.Elapsed}");
-                
+                using (var bar = new ProgressBar(1, "Decoding...", options))
+                {
+                    decoded = Encoding.Unicode.GetString(decrypted.ToArray());
+                    bar.Tick();
+                }
+
                 Console.WriteLine(decoded);
             }
             catch (Exception e)
